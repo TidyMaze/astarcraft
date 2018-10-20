@@ -4,8 +4,8 @@ import Robot.State
 
 import math._
 import scala.util._
-
 import scala.collection.JavaConversions._
+import scala.language.postfixOps
 
 object Constants {
     val MAP_WIDTH = 19
@@ -103,8 +103,8 @@ class Engine(val input: String) {
     // Place void cells, robots and arrows
     var index = 0
 
-    0 until MAP_WIDTH foreach { x =>
-        0 until MAP_HEIGHT foreach { y =>
+    0 until MAP_HEIGHT foreach { y =>
+        0 until MAP_WIDTH foreach { x =>
             val c = input.charAt(index)
             val cell = get(x, y)
             if (Character.isUpperCase(c)) {
@@ -143,7 +143,7 @@ class Engine(val input: String) {
         cell.`type` = direction
         // Check if we need to update a robot direction
         for (robot <- robots) {
-            if (robot.cell eq cell) robot.direction = direction
+            if (robot.cell == cell) robot.direction = direction
         }
     }
 
@@ -176,9 +176,10 @@ class Engine(val input: String) {
 }
 
 object Player extends App {
-    for(i <- 0 until 10) {
-        val line = readLine
-    }
+    val input = 0 until 10 map (_ => readLine) mkString
+
+    Console.err.println(input)
+
     val robotcount = readInt
     for(i <- 0 until robotcount) {
         val Array(_x, _y, direction) = readLine split " "
