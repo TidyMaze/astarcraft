@@ -11,7 +11,7 @@ import scala.language.postfixOps
 
 
 object Constants {
-    val TimesNone = 8
+    val TimesNone = 9
     val MaxTime = 950
 
     val MAP_WIDTH = 19
