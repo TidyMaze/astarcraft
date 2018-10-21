@@ -175,6 +175,8 @@ class Engine(val input: String) {
     }
 }
 
+case class ArrowAction(x: Int, y: Int, dir: Int)
+
 object Player extends App {
     val input = 0 until 10 map (_ => readLine) mkString
 
@@ -189,6 +191,11 @@ object Player extends App {
     
     // Write an action using println
     // To debug: Console.err.println("Debug messages...")
-    
-    println("0 0 U 1 1 R 2 2 D 3 3 L")
+
+    val solution: List[ArrowAction] = ArrowAction(0,0,UP) :: Nil
+
+    val solutionStr = solution
+      .map(action => s"${action.x} ${action.y} ${typeToChar(action.dir)}")
+      .mkString(" ")
+    println(solutionStr)
 }
