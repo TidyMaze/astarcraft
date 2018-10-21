@@ -9,7 +9,11 @@ import scala.collection.JavaConversions._
 import scala.collection.immutable
 import scala.language.postfixOps
 
+
 object Constants {
+    val TimesNone = 4
+    val MaxTime = 950
+
     val MAP_WIDTH = 19
     val MAP_HEIGHT = 10
     val MAP_AREA: Int = MAP_WIDTH * MAP_HEIGHT
@@ -161,16 +165,18 @@ object Player extends App {
     def randomRange(from: Int, to: Int) = Random.nextInt(to - from) + from
     def randomFrom[A](values: Seq[A]): A = values(Random.nextInt(values.size))
 
-    def getRandomSolution(grid: Array[Array[Cell]]): List[ArrowAction] = grid
-      .flatten
-      .toList
-      .collect({
-        case c: Cell if c.`type` == NONE =>
-          val dirValues = (UP :: DOWN :: LEFT :: RIGHT :: Nil)
-            .flatMap(e => if (c.nexts(e).`type` != VOID) Some(e) else None)
-          ArrowAction(c.x, c.y, randomFrom(NONE ::NONE ::NONE ::NONE ::NONE ::NONE ::NONE ::NONE ::NONE ::NONE :: dirValues))
-      })
-      .filter(_.dir != NONE)
+    def getRandomSolution(grid: Array[Array[Cell]]): List[ArrowAction] = {
+        val nones = List.fill(TimesNone)(NONE)
+        val basicDirs = UP :: DOWN :: LEFT :: RIGHT :: Nil
+        grid
+          .flatten
+          .toList
+          .collect({
+              case c: Cell if c.`type` == NONE =>
+                  ArrowAction(c.x, c.y, randomFrom(nones ++ basicDirs.flatMap(e => if (c.nexts(e).`type` != VOID) Some(e) else None)))
+          })
+          .filter(_.dir != NONE)
+    }
 
     def applySolution(solution: List[ArrowAction], robots: util.ArrayList[Robot], grid: Array[Array[Cell]]): Unit =
         solution.foreach(action => apply(grid, robots, action.x, action.y, action.dir))
@@ -234,7 +240,7 @@ object Player extends App {
 
         var bestSolution: List[ArrowAction] = null
         var bestScore = 0
-        while ((System.currentTimeMillis() - start) < 1000){
+        while ((System.currentTimeMillis() - start) < MaxTime){
             val (solution, score) = parseGenSolutionAndScore(grid, input, robotsInputs)
             if(score >= bestScore){
                 bestScore = score
