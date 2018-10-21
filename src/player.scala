@@ -159,12 +159,16 @@ object Player extends App {
 
     def random(pourcent: Int) = Random.nextInt(100) < pourcent
     def randomRange(from: Int, to: Int) = Random.nextInt(to - from) + from
+    def randomFrom[A](values: Seq[A]): A = values(Random.nextInt(values.size))
 
     def getRandomSolution(grid: Array[Array[Cell]]): List[ArrowAction] = grid
       .flatten
       .toList
       .collect({
-        case c: Cell if c.`type` == NONE => ArrowAction(c.x, c.y, randomRange(0, 5))
+        case c: Cell if c.`type` == NONE =>
+          val dirValues = (UP :: DOWN :: LEFT :: RIGHT :: Nil)
+            .flatMap(e => if (c.nexts(e).`type` != VOID) Some(e) else None)
+          ArrowAction(c.x, c.y, randomFrom(NONE :: dirValues))
       })
       .filter(_.dir != NONE)
 
