@@ -1,10 +1,12 @@
 import java.util
 
+import Player.input
 import Robot.State
 
 import math._
 import scala.util._
 import scala.collection.JavaConversions._
+import scala.collection.immutable
 import scala.language.postfixOps
 
 object Constants {
@@ -78,49 +80,16 @@ import java.util
 
 
 
-class Engine(val input: String) {
+class Engine(val robots: util.ArrayList[Robot], val grid: Array[Array[Cell]]) {
     var score = 0
-    // Initialize an empty map
-    var grid = Array.tabulate[Cell](MAP_WIDTH, MAP_HEIGHT)((x:Int,y:Int) => {
-        val c = new Cell(x,y, Cell.globalId)
-        Cell.globalId += 1
-        c
-    })
-    var robots = new util.ArrayList[Robot]
-    var wrecks = new util.HashSet[Robot]
 
-    // Link cells
-    0 until MAP_WIDTH foreach { x =>
-        0 until MAP_HEIGHT foreach { y =>
-            val cell = get(x, y)
-            cell.nexts(UP) = get(x, y - 1)
-            cell.nexts(RIGHT) = get(x + 1, y)
-            cell.nexts(DOWN) = get(x, y + 1)
-            cell.nexts(LEFT) = get(x - 1, y)
+    val wrecks = new util.HashSet[Robot]
+
+    def registerStates(): Unit = {
+        for (robot <- robots) {
+            robot.registerState
         }
     }
-
-    // Place void cells, robots and arrows
-    var index = 0
-
-    0 until MAP_HEIGHT foreach { y =>
-        0 until MAP_WIDTH foreach { x =>
-            val c = input.charAt(index)
-            val cell = get(x, y)
-            if (Character.isUpperCase(c)) {
-                val robot = new Robot()
-                robot.id = Robot.globalId
-                Robot.globalId += 1
-                robot.cell = cell
-                robot.direction = charToType(c)
-                robots.add(robot)
-            }
-            else cell.`type` = charToType(c)
-            index += 1
-        }
-    }
-
-
 
     def get(x: Int, y: Int): Cell = {
         var x2 = x
@@ -130,21 +99,6 @@ class Engine(val input: String) {
         if (y2 < 0) y2 += MAP_HEIGHT
         else if (y2 >= MAP_HEIGHT) y2 -= MAP_HEIGHT
         grid(x2)(y2)
-    }
-
-    def registerStates(): Unit = {
-        for (robot <- robots) {
-            robot.registerState
-        }
-    }
-
-    def apply(x: Int, y: Int, direction: Int): Unit = {
-        val cell = get(x, y)
-        cell.`type` = direction
-        // Check if we need to update a robot direction
-        for (robot <- robots) {
-            if (robot.cell == cell) robot.direction = direction
-        }
     }
 
     def play(): Unit = {
@@ -173,29 +127,128 @@ class Engine(val input: String) {
         // Garbage collection
         robots.removeAll(wrecks)
     }
+
+    def playToEnd(): Unit = {
+        while(robots.nonEmpty){
+            this.play()
+        }
+    }
 }
 
 case class ArrowAction(x: Int, y: Int, dir: Int)
 
 object Player extends App {
-    val input = 0 until 10 map (_ => readLine) mkString
-
-    Console.err.println(input)
-
-    val robotcount = readInt
-    for(i <- 0 until robotcount) {
-        val Array(_x, _y, direction) = readLine split " "
-        val x = _x.toInt
-        val y = _y.toInt
+    def get(grid: Array[Array[Cell]], x: Int, y: Int): Cell = {
+        var x2 = x
+        var y2 = y
+        if (x2 < 0) x2 += MAP_WIDTH
+        else if (x2 >= MAP_WIDTH) x2 -= MAP_WIDTH
+        if (y2 < 0) y2 += MAP_HEIGHT
+        else if (y2 >= MAP_HEIGHT) y2 -= MAP_HEIGHT
+        grid(x2)(y2)
     }
-    
-    // Write an action using println
-    // To debug: Console.err.println("Debug messages...")
 
-    val solution: List[ArrowAction] = ArrowAction(0,0,UP) :: Nil
+    def apply(grid: Array[Array[Cell]], robots: util.ArrayList[Robot], x: Int, y: Int, direction: Int): Unit = {
+        val cell = get(grid, x, y)
+        cell.`type` = direction
+        // Check if we need to update a robot direction
+        for (robot <- robots) {
+            if (robot.cell == cell) robot.direction = direction
+        }
+    }
+
+    def random(pourcent: Int) = Random.nextInt(100) < pourcent
+    def randomRange(from: Int, to: Int) = Random.nextInt(to - from) + from
+
+    def getRandomSolution(grid: Array[Array[Cell]]): List[ArrowAction] = grid
+      .flatten
+      .toList
+      .collect({
+        case c: Cell if c.`type` == NONE => ArrowAction(c.x, c.y, randomRange(0, 5))
+      })
+      .filter(_.dir != NONE)
+
+    def applySolution(solution: List[ArrowAction], robots: util.ArrayList[Robot], grid: Array[Array[Cell]]): Unit =
+        solution.foreach(action => apply(grid, robots, action.x, action.y, action.dir))
+
+
+    def parseGenSolutionAndScore(input: Array[Array[Char]]): (List[ArrowAction], Int) = {
+        // Initialize an empty map
+        var grid = Array.tabulate[Cell](MAP_WIDTH, MAP_HEIGHT)((x:Int,y:Int) => {
+            val c = new Cell(x,y, Cell.globalId)
+            Cell.globalId += 1
+            c
+        })
+
+        // Link cells
+        0 until MAP_HEIGHT foreach { y =>
+            0 until MAP_WIDTH foreach { x =>
+                val cell = get(grid, x, y)
+                cell.nexts(UP) = get(grid, x, y - 1)
+                cell.nexts(RIGHT) = get(grid, x + 1, y)
+                cell.nexts(DOWN) = get(grid, x, y + 1)
+                cell.nexts(LEFT) = get(grid, x - 1, y)
+            }
+        }
+
+        0 until MAP_HEIGHT foreach { y =>
+            0 until MAP_WIDTH foreach { x =>
+                val c = input(y)(x)
+                val cell = get(grid, x, y)
+                cell.`type` = charToType(c)
+            }
+        }
+
+        Console.err.println(input.map(_.mkString))
+
+        val robots = new util.ArrayList[Robot]
+
+        val robotcount = readInt
+        for(i <- 0 until robotcount) {
+            val Array(_x, _y, direction) = readLine split " "
+            val x = _x.toInt
+            val y = _y.toInt
+            val robot = new Robot()
+            robot.id = Robot.globalId
+            Robot.globalId += 1
+            robot.cell = get(grid, x, y)
+            robot.direction = charToType(direction.head)
+            robots.add(robot)
+        }
+
+
+
+
+        val solution: List[ArrowAction] = getRandomSolution(grid)
+
+        applySolution(solution, robots, grid)
+
+        val engine = new Engine(robots, grid)
+        engine.playToEnd()
+        val score = engine.score
+
+        (solution, score)
+    }
+
+    def findBestSolution(input: Array[Array[Char]]) = 0 until 10 map { sim =>
+        val out@(_, score) = parseGenSolutionAndScore(input)
+        Console.err.println(s"Solution found with score $score")
+        out
+    } maxBy(_._2)
+
+
+    val input = 0 until 10 map (_ => readLine) map (_.toArray)
+
+
+    val (solution, score): (List[ArrowAction], Int) = findBestSolution(input.toArray)
 
     val solutionStr = solution
       .map(action => s"${action.x} ${action.y} ${typeToChar(action.dir)}")
       .mkString(" ")
+
+    Console.err.println(s"Expected score: $score")
+
     println(solutionStr)
+
+
 }
