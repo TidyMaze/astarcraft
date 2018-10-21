@@ -230,7 +230,7 @@ object Player extends App {
 
     def findBestSolution(input: Array[Array[Char]], robotsInputs: Seq[String]) = 0 until 1000 map { sim =>
         val out@(_, score) = parseGenSolutionAndScore(input, robotsInputs)
-        Console.err.println(s"Solution found with score $score")
+//        Console.err.println(s"Solution found with score $score")
         out
     } maxBy(_._2)
 
