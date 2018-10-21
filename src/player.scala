@@ -176,25 +176,7 @@ object Player extends App {
         solution.foreach(action => apply(grid, robots, action.x, action.y, action.dir))
 
 
-    def parseGenSolutionAndScore(input: Array[Array[Char]], robotsInputs: Seq[String]): (List[ArrowAction], Int) = {
-        // Initialize an empty map
-        val grid = Array.tabulate[Cell](MAP_WIDTH, MAP_HEIGHT)((x:Int,y:Int) => {
-            val c = new Cell(x,y, Cell.globalId)
-            Cell.globalId += 1
-            c
-        })
-
-        // Link cells
-        0 until MAP_HEIGHT foreach { y =>
-            0 until MAP_WIDTH foreach { x =>
-                val cell = get(grid, x, y)
-                cell.nexts(UP) = get(grid, x, y - 1)
-                cell.nexts(RIGHT) = get(grid, x + 1, y)
-                cell.nexts(DOWN) = get(grid, x, y + 1)
-                cell.nexts(LEFT) = get(grid, x - 1, y)
-            }
-        }
-
+    def parseGenSolutionAndScore(grid: Array[Array[Cell]], input: Array[Array[Char]], robotsInputs: Seq[String]): (List[ArrowAction], Int) = {
         0 until MAP_HEIGHT foreach { y =>
             0 until MAP_WIDTH foreach { x =>
                 val c = input(y)(x)
@@ -218,9 +200,6 @@ object Player extends App {
             robots.add(robot)
         }
 
-
-
-
         val solution: List[ArrowAction] = getRandomSolution(grid)
 
         applySolution(solution, robots, grid)
@@ -232,11 +211,29 @@ object Player extends App {
         (solution, score)
     }
 
-    def findBestSolution(input: Array[Array[Char]], robotsInputs: Seq[String]) = 0 until 1000 map { sim =>
-        val out@(_, score) = parseGenSolutionAndScore(input, robotsInputs)
-//        Console.err.println(s"Solution found with score $score")
-        out
-    } maxBy(_._2)
+    def findBestSolution(input: Array[Array[Char]], robotsInputs: Seq[String]) = {
+      // Initialize an empty map
+      val grid = Array.tabulate[Cell](MAP_WIDTH, MAP_HEIGHT)((x:Int,y:Int) => {
+        val c = new Cell(x,y, Cell.globalId)
+        Cell.globalId += 1
+        c
+      })
+
+      // Link cells
+      0 until MAP_HEIGHT foreach { y =>
+        0 until MAP_WIDTH foreach { x =>
+          val cell = get(grid, x, y)
+          cell.nexts(UP) = get(grid, x, y - 1)
+          cell.nexts(RIGHT) = get(grid, x + 1, y)
+          cell.nexts(DOWN) = get(grid, x, y + 1)
+          cell.nexts(LEFT) = get(grid, x - 1, y)
+        }
+      }
+
+      (0 until 1000).toStream.map { _ =>
+          parseGenSolutionAndScore(grid, input, robotsInputs)
+      } maxBy(_._2)
+    }
 
 
     val input = 0 until 10 map (_ => readLine) map (_.toArray)
