@@ -212,6 +212,8 @@ object Player extends App {
     }
 
     def findBestSolution(input: Array[Array[Char]], robotsInputs: Seq[String]) = {
+      val start = System.currentTimeMillis()
+
       // Initialize an empty map
       val grid = Array.tabulate[Cell](MAP_WIDTH, MAP_HEIGHT)((x:Int,y:Int) => {
         val c = new Cell(x,y, Cell.globalId)
@@ -230,9 +232,16 @@ object Player extends App {
         }
       }
 
-      (0 until 1000).toStream.map { _ =>
-          parseGenSolutionAndScore(grid, input, robotsInputs)
-      } maxBy(_._2)
+        var bestSolution: List[ArrowAction] = null
+        var bestScore = 0
+        while ((System.currentTimeMillis() - start) < 1000){
+            val (solution, score) = parseGenSolutionAndScore(grid, input, robotsInputs)
+            if(score >= bestScore){
+                bestScore = score
+                bestSolution = solution
+            }
+        }
+        (bestSolution, bestScore)
     }
 
 
