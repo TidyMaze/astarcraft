@@ -172,7 +172,7 @@ object Player extends App {
         solution.foreach(action => apply(grid, robots, action.x, action.y, action.dir))
 
 
-    def parseGenSolutionAndScore(input: Array[Array[Char]]): (List[ArrowAction], Int) = {
+    def parseGenSolutionAndScore(input: Array[Array[Char]], robotsInputs: Seq[String]): (List[ArrowAction], Int) = {
         // Initialize an empty map
         var grid = Array.tabulate[Cell](MAP_WIDTH, MAP_HEIGHT)((x:Int,y:Int) => {
             val c = new Cell(x,y, Cell.globalId)
@@ -199,13 +199,11 @@ object Player extends App {
             }
         }
 
-        Console.err.println(input.map(_.mkString))
 
         val robots = new util.ArrayList[Robot]
 
-        val robotcount = readInt
-        for(i <- 0 until robotcount) {
-            val Array(_x, _y, direction) = readLine split " "
+        robotsInputs.foreach { line =>
+            val Array(_x, _y, direction) = line split " "
             val x = _x.toInt
             val y = _y.toInt
             val robot = new Robot()
@@ -230,8 +228,8 @@ object Player extends App {
         (solution, score)
     }
 
-    def findBestSolution(input: Array[Array[Char]]) = 0 until 10 map { sim =>
-        val out@(_, score) = parseGenSolutionAndScore(input)
+    def findBestSolution(input: Array[Array[Char]], robotsInputs: Seq[String]) = 0 until 10 map { sim =>
+        val out@(_, score) = parseGenSolutionAndScore(input, robotsInputs)
         Console.err.println(s"Solution found with score $score")
         out
     } maxBy(_._2)
@@ -239,8 +237,14 @@ object Player extends App {
 
     val input = 0 until 10 map (_ => readLine) map (_.toArray)
 
+    val robotcount = readInt
+    val robotsInputs = 0 until robotcount map { _ =>
+        readLine
+    }
 
-    val (solution, score): (List[ArrowAction], Int) = findBestSolution(input.toArray)
+    Console.err.println(input.map(_.mkString).mkString)
+
+    val (solution, score): (List[ArrowAction], Int) = findBestSolution(input.toArray, robotsInputs)
 
     val solutionStr = solution
       .map(action => s"${action.x} ${action.y} ${typeToChar(action.dir)}")
