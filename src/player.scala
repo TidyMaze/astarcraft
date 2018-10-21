@@ -174,7 +174,7 @@ object Player extends App {
 
     def parseGenSolutionAndScore(input: Array[Array[Char]], robotsInputs: Seq[String]): (List[ArrowAction], Int) = {
         // Initialize an empty map
-        var grid = Array.tabulate[Cell](MAP_WIDTH, MAP_HEIGHT)((x:Int,y:Int) => {
+        val grid = Array.tabulate[Cell](MAP_WIDTH, MAP_HEIGHT)((x:Int,y:Int) => {
             val c = new Cell(x,y, Cell.globalId)
             Cell.globalId += 1
             c
@@ -228,7 +228,7 @@ object Player extends App {
         (solution, score)
     }
 
-    def findBestSolution(input: Array[Array[Char]], robotsInputs: Seq[String]) = 0 until 10 map { sim =>
+    def findBestSolution(input: Array[Array[Char]], robotsInputs: Seq[String]) = 0 until 1000 map { sim =>
         val out@(_, score) = parseGenSolutionAndScore(input, robotsInputs)
         Console.err.println(s"Solution found with score $score")
         out
