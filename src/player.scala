@@ -168,7 +168,7 @@ object Player extends App {
         case c: Cell if c.`type` == NONE =>
           val dirValues = (UP :: DOWN :: LEFT :: RIGHT :: Nil)
             .flatMap(e => if (c.nexts(e).`type` != VOID) Some(e) else None)
-          ArrowAction(c.x, c.y, randomFrom(NONE :: dirValues))
+          ArrowAction(c.x, c.y, randomFrom(NONE ::NONE ::NONE ::NONE ::NONE ::NONE ::NONE ::NONE ::NONE ::NONE :: dirValues))
       })
       .filter(_.dir != NONE)
 
