@@ -146,7 +146,9 @@ class Engine(val robots: util.ArrayList[Robot], val grid: Array[Array[Cell]]) {
     }
 }
 
-case class ArrowAction(x: Int, y: Int, dir: Int)
+case class ArrowAction(x: Int, y: Int, dir: Int) {
+  override def toString: String = s"${typeToChar(dir)}($x,$y)"
+}
 
 object Player extends App {
 
