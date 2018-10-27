@@ -182,21 +182,28 @@ object Player extends App {
         val nones = List.fill(TimesNone)(NONE)
         val basicDirs = UP :: DOWN :: LEFT :: RIGHT :: Nil
 
-        val newChromosome: Chromosome = Array.tabulate[Int](MAP_HEIGHT, MAP_WIDTH)((y:Int,x:Int) => NONE)
+        val newChromosome: Chromosome = Array.tabulate[Int](MAP_HEIGHT, MAP_WIDTH)((y:Int,x:Int) => VOID)
 
         grid
           .flatten
           .toList
           .foreach {
               case c: Cell if c.`type` == NONE =>
-                newChromosome(c.y)(c.x) = randomFrom(nones ++ basicDirs.flatMap(e => if (c.nexts(e).`type` != VOID) Some(e) else None))
-              case _ => // nothing
+                newChromosome(c.y)(c.x) = randomFrom(nones ++ basicDirs.flatMap(e => if (c.nexts(e).`type` == NONE) Some(e) else None))
+              case c: Cell =>
+                newChromosome(c.y)(c.x) = c.`type`
           }
         newChromosome
     }
 
-    def applySolution(solution: List[ArrowAction], robots: util.ArrayList[Robot], grid: Array[Array[Cell]]): Unit =
-        solution.foreach(action => apply(grid, robots, action.x, action.y, action.dir))
+    def applySolution(solution: Chromosome, robots: util.ArrayList[Robot], grid: Array[Array[Cell]]): Unit =
+      0 until MAP_HEIGHT foreach { y =>
+        0 until MAP_WIDTH foreach { x =>
+          if(solution(y)(x) != NONE && solution(y)(x) != VOID) {
+            apply(grid, robots, x, y, solution(y)(x))
+          }
+        }
+      }
 
 
   def rebuildActionsFromChromosome(grid: Array[Array[Cell]], chromosome: Chromosome):  List[ArrowAction] = {
@@ -212,7 +219,7 @@ object Player extends App {
     res.toList
   }
 
-  def parseGenSolutionAndScore(grid: Array[Array[Cell]], input: Array[Array[Char]], robotsInputs: Seq[String]): (List[ArrowAction], Int) = {
+  def parseGenSolutionAndScore(grid: Array[Array[Cell]], input: Array[Array[Char]], robotsInputs: Seq[String]): (Chromosome, Int) = {
         0 until MAP_HEIGHT foreach { y =>
             0 until MAP_WIDTH foreach { x =>
                 val c = input(y)(x)
@@ -236,16 +243,18 @@ object Player extends App {
             robots.add(robot)
         }
 
-        val solution: List[ArrowAction] = rebuildActionsFromChromosome(grid, getRandomChromosome(grid))
+        val chromosome = getRandomChromosome(grid)
 
-        applySolution(solution, robots, grid)
+        applySolution(chromosome, robots, grid)
 
         val engine = new Engine(robots, grid)
         engine.playToEnd()
         val score = engine.score
 
-        (solution, score)
+        (chromosome, score)
     }
+
+    def showChromosome(c: Chromosome): String = c.map(_.map(typeToChar)).map(_.mkString("")).mkString("\t")
 
     def findBestSolution(input: Array[Array[Char]], robotsInputs: Seq[String]) = {
       val start = System.currentTimeMillis()
@@ -268,7 +277,7 @@ object Player extends App {
         }
       }
 
-        var bestSolution: List[ArrowAction] = null
+        var bestChromosome: Chromosome = null
         var bestScore = 0
         val chromosomesScored = 0 until GA.PoolSize map { indexChromosome =>
             val (solution, score) = parseGenSolutionAndScore(grid, input, robotsInputs)
@@ -276,7 +285,7 @@ object Player extends App {
             if(score > bestScore){
                 Console.err.println(s"Found a better chromosome : $score (gain ${score - bestScore})")
                 bestScore = score
-                bestSolution = solution
+                bestChromosome = solution
             }
             (solution, score)
         }
@@ -285,9 +294,10 @@ object Player extends App {
 
         val selected = chromosomesSorted.subList(0, (GA.PoolSize * GA.SelectionSize).floor.toInt)
 
-        Console.err.println(selected.map(c => c._2 + " with " + c._1).mkString("\n"))
+        Console.err.println(selected.map(c => c._2 + " with " + showChromosome(c._1)).mkString("\n"))
 
-        chromosomesSorted.head
+      val (finalChromosome, finalScore) = chromosomesSorted.head
+      (rebuildActionsFromChromosome(grid, finalChromosome), finalScore)
     }
 
     if(Constants.isLocal){
