@@ -1,6 +1,6 @@
+import java.io.{Reader, StringBufferInputStream, StringReader}
 import java.util
 
-import Player.input
 import Robot.State
 
 import math._
@@ -11,8 +11,10 @@ import scala.language.postfixOps
 
 
 object Constants {
+    val isLocal = true
+
     val TimesNone = 10
-    val MaxTime = 950
+    val MaxTime = if(isLocal)20000 else 950
 
     val MAP_WIDTH = 19
     val MAP_HEIGHT = 10
@@ -250,25 +252,66 @@ object Player extends App {
         (bestSolution, bestScore)
     }
 
+    if(Constants.isLocal){
+        val rawInput =
+            """#........L........#
+              |#........R........#
+              |#........L........#
+              |#........R........#
+              |#DUDUDUDU#UDUDUDUD#
+              |#........R........#
+              |#........L........#
+              |#........R........#
+              |#........L........#
+              |###################
+              |4
+              |1 0 R
+              |17 0 D
+              |1 8 U
+              |17 8 L
+            """.stripMargin
 
-    val input = 0 until 10 map (_ => readLine) map (_.toArray)
-
-    val robotcount = readInt
-    val robotsInputs = 0 until robotcount map { _ =>
-        readLine
+        val sr = new StringReader(rawInput)
+        Console.withIn(sr){
+            run
+        }
+    } else {
+        run
     }
 
-    Console.err.println(input.map(_.mkString).mkString)
+    private def run = {
+        Console.err.println("START_INPUT")
 
-    val (solution, score): (List[ArrowAction], Int) = findBestSolution(input.toArray, robotsInputs)
+        def getLine() = scala.io.StdIn.readLine()
 
-    val solutionStr = solution
-      .map(action => s"${action.x} ${action.y} ${typeToChar(action.dir)}")
-      .mkString(" ")
+        val input = 0 until 10 map (_ => {
+            val l = getLine()
+            Console.err.println(l)
+            l
+        }) map (_.toArray)
 
-    Console.err.println(s"Expected score: $score")
+        val robotcount = readInt
+        Console.err.println(robotcount)
+        val robotsInputs = 0 until robotcount map { _ =>
+            val l = getLine()
+            Console.err.println(l)
+            l
+        }
 
-    println(solutionStr)
+        Console.err.println("END_INPUT")
+
+        //    Console.err.println(input.map(_.mkString).mkString("\n"))
+
+        val (solution, score): (List[ArrowAction], Int) = findBestSolution(input.toArray, robotsInputs)
+
+        val solutionStr = solution
+          .map(action => s"${action.x} ${action.y} ${typeToChar(action.dir)}")
+          .mkString(" ")
+
+        Console.err.println(s"Expected score: $score")
+
+        println(solutionStr)
+    }
 
 
 }
