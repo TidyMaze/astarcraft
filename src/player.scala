@@ -297,10 +297,11 @@ object Player extends App {
         (chromosome, score)
       }
 
+      chromosomesScored = chromosomesScored.sortBy(_._2)(Ordering.Int.reverse)
+
       0 until GA.MaxGenerations foreach { generation =>
         Console.err.println(s"Gen $generation")
-        val chromosomesSorted: List[(Chromosome, Gene)] = chromosomesScored.sortBy(_._2)(Ordering.Int.reverse)
-        val selected:List[Chromosome] = chromosomesSorted.take((GA.PoolSize * GA.SelectionSize).floor.toInt).map(_._1)
+        val selected:List[Chromosome] = chromosomesScored.take((GA.PoolSize * GA.SelectionSize).floor.toInt).map(_._1)
 
         val evolved: List[Chromosome] = evolve(selected)
         assert(evolved.size == GA.PoolSize)
@@ -309,6 +310,8 @@ object Player extends App {
 
 //        Console.err.println(newPoolScored.map(c => c._2 + " with " + showChromosome(c._1)).mkString("\n"))
         chromosomesScored = newPoolScored
+
+        chromosomesScored = chromosomesScored.sortBy(_._2)(Ordering.Int.reverse)
       }
 
 
