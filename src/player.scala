@@ -31,7 +31,7 @@ object Constants {
     object GA {
       val PoolSize = if(isLocal) 1000 else 100
       val SelectionSize = 10.0/100.0
-      val MaxGenerations = if(isLocal) 50 else 10
+      val MaxGenerations = if(isLocal) 50 else 20
     }
 
     def typeToChar(`type`: Int): Char = {
@@ -261,7 +261,7 @@ object Player extends App {
       val newChild: Chromosome = Array.fill[Int](MAP_HEIGHT, MAP_WIDTH)(VOID)
       0 until MAP_HEIGHT foreach { y =>
         0 until MAP_WIDTH foreach { x =>
-          newChild(y)(x) = if(random(90)) parent1(y)(x) else parent2(y)(x)
+          newChild(y)(x) = if(random(50)) parent1(y)(x) else parent2(y)(x)
         }
       }
 
