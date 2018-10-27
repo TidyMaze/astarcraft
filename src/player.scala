@@ -11,7 +11,7 @@ import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import scala.language.postfixOps
 
 object Constants {
-    val isLocal = true
+    val isLocal = false
 
     val TimesNone = 10
     val MaxTime = if(isLocal)20000 else 950
@@ -29,9 +29,9 @@ object Constants {
     val DEATH_VOID = 1
 
     object GA {
-      val PoolSize = 1000
+      val PoolSize = if(isLocal) 1000 else 100
       val SelectionSize = 10.0/100.0
-      val MaxGenerations = 50
+      val MaxGenerations = if(isLocal) 50 else 10
     }
 
     def typeToChar(`type`: Int): Char = {
@@ -300,7 +300,7 @@ object Player extends App {
 
         val newPoolScored = evolved.map(c => (c, scoreChromosome(input, robotsInputs, c)))
 
-        Console.err.println(newPoolScored.map(c => c._2 + " with " + showChromosome(c._1)).mkString("\n"))
+//        Console.err.println(newPoolScored.map(c => c._2 + " with " + showChromosome(c._1)).mkString("\n"))
         chromosomesScored = newPoolScored
       }
 
