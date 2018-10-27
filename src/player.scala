@@ -7,8 +7,8 @@ import math._
 import scala.util._
 import scala.collection.JavaConversions._
 import scala.collection.immutable
+import scala.collection.mutable.ArrayBuffer
 import scala.language.postfixOps
-
 
 object Constants {
     val isLocal = true
@@ -149,6 +149,10 @@ class Engine(val robots: util.ArrayList[Robot], val grid: Array[Array[Cell]]) {
 case class ArrowAction(x: Int, y: Int, dir: Int)
 
 object Player extends App {
+
+    type Gene = Int
+    type Chromosome = Array[Array[Gene]]
+
     def get(grid: Array[Array[Cell]], x: Int, y: Int): Cell = {
         var x2 = x
         var y2 = y
@@ -156,7 +160,7 @@ object Player extends App {
         else if (x2 >= MAP_WIDTH) x2 -= MAP_WIDTH
         if (y2 < 0) y2 += MAP_HEIGHT
         else if (y2 >= MAP_HEIGHT) y2 -= MAP_HEIGHT
-        grid(x2)(y2)
+        grid(y2)(x2)
     }
 
     def apply(grid: Array[Array[Cell]], robots: util.ArrayList[Robot], x: Int, y: Int, direction: Int): Unit = {
@@ -172,24 +176,41 @@ object Player extends App {
     def randomRange(from: Int, to: Int) = Random.nextInt(to - from) + from
     def randomFrom[A](values: Seq[A]): A = values(Random.nextInt(values.size))
 
-    def getRandomSolution(grid: Array[Array[Cell]]): List[ArrowAction] = {
+    def getRandomChromosome(grid: Array[Array[Cell]]): Chromosome = {
         val nones = List.fill(TimesNone)(NONE)
         val basicDirs = UP :: DOWN :: LEFT :: RIGHT :: Nil
+
+        val newChromosome: Chromosome = Array.tabulate[Int](MAP_HEIGHT, MAP_WIDTH)((y:Int,x:Int) => NONE)
+
         grid
           .flatten
           .toList
-          .collect({
+          .foreach {
               case c: Cell if c.`type` == NONE =>
-                  ArrowAction(c.x, c.y, randomFrom(nones ++ basicDirs.flatMap(e => if (c.nexts(e).`type` != VOID) Some(e) else None)))
-          })
-          .filter(_.dir != NONE)
+                newChromosome(c.y)(c.x) = randomFrom(nones ++ basicDirs.flatMap(e => if (c.nexts(e).`type` != VOID) Some(e) else None))
+              case _ => // nothing
+          }
+        newChromosome
     }
 
     def applySolution(solution: List[ArrowAction], robots: util.ArrayList[Robot], grid: Array[Array[Cell]]): Unit =
         solution.foreach(action => apply(grid, robots, action.x, action.y, action.dir))
 
 
-    def parseGenSolutionAndScore(grid: Array[Array[Cell]], input: Array[Array[Char]], robotsInputs: Seq[String]): (List[ArrowAction], Int) = {
+  def rebuildActionsFromChromosome(grid: Array[Array[Cell]], chromosome: Chromosome):  List[ArrowAction] = {
+    val res = ArrayBuffer.empty[ArrowAction]
+    0 until MAP_HEIGHT foreach { y =>
+      0 until MAP_WIDTH foreach { x =>
+        val gene = chromosome(y)(x)
+        if(grid(y)(x).`type` != gene && gene != NONE){
+          res += ArrowAction(x, y, gene)
+        }
+      }
+    }
+    res.toList
+  }
+
+  def parseGenSolutionAndScore(grid: Array[Array[Cell]], input: Array[Array[Char]], robotsInputs: Seq[String]): (List[ArrowAction], Int) = {
         0 until MAP_HEIGHT foreach { y =>
             0 until MAP_WIDTH foreach { x =>
                 val c = input(y)(x)
@@ -213,7 +234,7 @@ object Player extends App {
             robots.add(robot)
         }
 
-        val solution: List[ArrowAction] = getRandomSolution(grid)
+        val solution: List[ArrowAction] = rebuildActionsFromChromosome(grid, getRandomChromosome(grid))
 
         applySolution(solution, robots, grid)
 
@@ -228,7 +249,7 @@ object Player extends App {
       val start = System.currentTimeMillis()
 
       // Initialize an empty map
-      val grid = Array.tabulate[Cell](MAP_WIDTH, MAP_HEIGHT)((x:Int,y:Int) => {
+      val grid = Array.tabulate[Cell](MAP_HEIGHT, MAP_WIDTH)((y:Int,x:Int) => {
         val c = new Cell(x,y, Cell.globalId)
         Cell.globalId += 1
         c
