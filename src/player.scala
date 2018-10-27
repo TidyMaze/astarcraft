@@ -29,8 +29,8 @@ object Constants {
     val DEATH_VOID = 1
 
     object GA {
-      val PoolSize = 100
-      val SelectionSize = 10.0/100.0
+      val PoolSize = 1000
+      val SelectionSize = 1.0/100.0
     }
 
     def typeToChar(`type`: Int): Char = {
@@ -270,7 +270,7 @@ object Player extends App {
         var bestScore = 0
         val chromosomesScored = 0 until GA.PoolSize map { indexChromosome =>
             val (solution, score) = parseGenSolutionAndScore(grid, input, robotsInputs)
-            Console.err.println(s"Chromosome $indexChromosome: $score")
+//            Console.err.println(s"Chromosome $indexChromosome: $score")
             if(score > bestScore){
                 Console.err.println(s"Found a better chromosome : $score (gain ${score - bestScore})")
                 bestScore = score
