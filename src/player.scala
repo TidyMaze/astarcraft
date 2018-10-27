@@ -28,6 +28,11 @@ object Constants {
     val DEATH_INFINITE_LOOP = 0
     val DEATH_VOID = 1
 
+    object GA {
+      val PoolSize = 100
+      val SelectionSize = 10.0/100.0
+    }
+
     def typeToChar(`type`: Int): Char = {
         if (`type` == UP) return 'U'
         else if (`type` == RIGHT) return 'R'
@@ -242,14 +247,24 @@ object Player extends App {
 
         var bestSolution: List[ArrowAction] = null
         var bestScore = 0
-        while ((System.currentTimeMillis() - start) < MaxTime){
+        val chromosomesScored = 0 until GA.PoolSize map { indexChromosome =>
             val (solution, score) = parseGenSolutionAndScore(grid, input, robotsInputs)
-            if(score >= bestScore){
+            Console.err.println(s"Chromosome $indexChromosome: $score")
+            if(score > bestScore){
+                Console.err.println(s"Found a better chromosome : $score (gain ${score - bestScore})")
                 bestScore = score
                 bestSolution = solution
             }
+            (solution, score)
         }
-        (bestSolution, bestScore)
+
+        val chromosomesSorted = chromosomesScored.sortBy(_._2)(Ordering.Int.reverse)
+
+        val selected = chromosomesSorted.subList(0, (GA.PoolSize * GA.SelectionSize).floor.toInt)
+
+        Console.err.println(selected.map(c => c._2 + " with " + c._1).mkString("\n"))
+
+        chromosomesSorted.head
     }
 
     if(Constants.isLocal){
