@@ -7,7 +7,7 @@ import math._
 import scala.util._
 import scala.collection.JavaConversions._
 import scala.collection.immutable
-import scala.collection.mutable.ArrayBuffer
+import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import scala.language.postfixOps
 
 object Constants {
@@ -30,7 +30,8 @@ object Constants {
 
     object GA {
       val PoolSize = 1000
-      val SelectionSize = 1.0/100.0
+      val SelectionSize = 10.0/100.0
+      val MaxGenerations = 50
     }
 
     def typeToChar(`type`: Int): Char = {
@@ -219,88 +220,121 @@ object Player extends App {
     res.toList
   }
 
-  def parseGenSolutionAndScore(grid: Array[Array[Cell]], input: Array[Array[Char]], robotsInputs: Seq[String]): (Chromosome, Int) = {
-        0 until MAP_HEIGHT foreach { y =>
-            0 until MAP_WIDTH foreach { x =>
-                val c = input(y)(x)
-                val cell = get(grid, x, y)
-                cell.`type` = charToType(c)
-            }
-        }
+  def showChromosome(c: Chromosome): String = c.map(_.map(typeToChar)).map(_.mkString("")).mkString("\t")
 
+  def mkGridFromInput(input: Array[Array[Char]]): Array[Array[Cell]] = {
+    // Initialize an empty map
+    val grid = Array.tabulate[Cell](MAP_HEIGHT, MAP_WIDTH)((y:Int,x:Int) => {
+      val c = new Cell(x,y, Cell.globalId)
+      Cell.globalId += 1
+      c
+    })
 
-        val robots = new util.ArrayList[Robot]
-
-        robotsInputs.foreach { line =>
-            val Array(_x, _y, direction) = line split " "
-            val x = _x.toInt
-            val y = _y.toInt
-            val robot = new Robot()
-            robot.id = Robot.globalId
-            Robot.globalId += 1
-            robot.cell = get(grid, x, y)
-            robot.direction = charToType(direction.head)
-            robots.add(robot)
-        }
-
-        val chromosome = getRandomChromosome(grid)
-
-        applySolution(chromosome, robots, grid)
-
-        val engine = new Engine(robots, grid)
-        engine.playToEnd()
-        val score = engine.score
-
-        (chromosome, score)
+    // Link cells
+    0 until MAP_HEIGHT foreach { y =>
+      0 until MAP_WIDTH foreach { x =>
+        val cell = get(grid, x, y)
+        cell.nexts(UP) = get(grid, x, y - 1)
+        cell.nexts(RIGHT) = get(grid, x + 1, y)
+        cell.nexts(DOWN) = get(grid, x, y + 1)
+        cell.nexts(LEFT) = get(grid, x - 1, y)
+      }
     }
 
-    def showChromosome(c: Chromosome): String = c.map(_.map(typeToChar)).map(_.mkString("")).mkString("\t")
+    0 until MAP_HEIGHT foreach { y =>
+      0 until MAP_WIDTH foreach { x =>
+        val c = input(y)(x)
+        val cell = get(grid, x, y)
+        cell.`type` = charToType(c)
+      }
+    }
 
-    def findBestSolution(input: Array[Array[Char]], robotsInputs: Seq[String]) = {
-      val start = System.currentTimeMillis()
+    grid
+  }
 
-      // Initialize an empty map
-      val grid = Array.tabulate[Cell](MAP_HEIGHT, MAP_WIDTH)((y:Int,x:Int) => {
-        val c = new Cell(x,y, Cell.globalId)
-        Cell.globalId += 1
-        c
-      })
+  def evolve(selected: List[Chromosome]): List[Chromosome] = {
+    val res = ListBuffer.empty[Chromosome]
+    while(res.size < GA.PoolSize){
+      val parent1 = randomFrom(selected)
+      val parent2 = randomFrom(selected)
 
-      // Link cells
+      val newChild: Chromosome = Array.fill[Int](MAP_HEIGHT, MAP_WIDTH)(VOID)
       0 until MAP_HEIGHT foreach { y =>
         0 until MAP_WIDTH foreach { x =>
-          val cell = get(grid, x, y)
-          cell.nexts(UP) = get(grid, x, y - 1)
-          cell.nexts(RIGHT) = get(grid, x + 1, y)
-          cell.nexts(DOWN) = get(grid, x, y + 1)
-          cell.nexts(LEFT) = get(grid, x - 1, y)
+          newChild(y)(x) = if(random(90)) parent1(y)(x) else parent2(y)(x)
         }
       }
 
-        var bestChromosome: Chromosome = null
-        var bestScore = 0
-        val chromosomesScored = 0 until GA.PoolSize map { indexChromosome =>
-            val (solution, score) = parseGenSolutionAndScore(grid, input, robotsInputs)
-//            Console.err.println(s"Chromosome $indexChromosome: $score")
-            if(score > bestScore){
-                Console.err.println(s"Found a better chromosome : $score (gain ${score - bestScore})")
-                bestScore = score
-                bestChromosome = solution
-            }
-            (solution, score)
-        }
+//      Console.err.println("Result of crossover between")
+//      Console.err.println(showChromosome(parent1))
+//      Console.err.println("and")
+//      Console.err.println(showChromosome(parent2))
+//      Console.err.println("gives")
+//      Console.err.println(showChromosome(newChild))
+      res += newChild
+    }
+    res.toList
+  }
 
-        val chromosomesSorted = chromosomesScored.sortBy(_._2)(Ordering.Int.reverse)
+  def findBestSolution(input: Array[Array[Char]], robotsInputs: Seq[String]) = {
+      val start = System.currentTimeMillis()
 
-        val selected = chromosomesSorted.subList(0, (GA.PoolSize * GA.SelectionSize).floor.toInt)
+      val startGrid = mkGridFromInput(input)
 
-        Console.err.println(selected.map(c => c._2 + " with " + showChromosome(c._1)).mkString("\n"))
+      var chromosomesScored = List.empty[(Chromosome, Int)]
 
-      val (finalChromosome, finalScore) = chromosomesSorted.head
-      (rebuildActionsFromChromosome(grid, finalChromosome), finalScore)
+      // init with random chromosomes
+      chromosomesScored = (0 until GA.PoolSize).toList map { indexChromosome =>
+        val chromosome = getRandomChromosome(startGrid)
+        val score: Gene = scoreChromosome(input, robotsInputs, chromosome)
+        (chromosome, score)
+      }
+
+      0 until GA.MaxGenerations foreach { generation =>
+        Console.err.println(s"Gen $generation")
+        val chromosomesSorted: List[(Chromosome, Gene)] = chromosomesScored.sortBy(_._2)(Ordering.Int.reverse)
+        val selected:List[Chromosome] = chromosomesSorted.take((GA.PoolSize * GA.SelectionSize).floor.toInt).map(_._1)
+
+        val evolved: List[Chromosome] = evolve(selected)
+        assert(evolved.size == GA.PoolSize)
+
+        val newPoolScored = evolved.map(c => (c, scoreChromosome(input, robotsInputs, c)))
+
+        Console.err.println(newPoolScored.map(c => c._2 + " with " + showChromosome(c._1)).mkString("\n"))
+        chromosomesScored = newPoolScored
+      }
+
+
+      val (finalChromosome, finalScore) = chromosomesScored.head
+      (rebuildActionsFromChromosome(startGrid, finalChromosome), finalScore)
     }
 
-    if(Constants.isLocal){
+  private def scoreChromosome(input: Array[Array[Char]], robotsInputs: Seq[String], chromosome: Chromosome): Gene = {
+    val grid = mkGridFromInput(input)
+
+    val robots = new util.ArrayList[Robot]
+
+    robotsInputs.foreach { line =>
+      val Array(_x, _y, direction) = line split " "
+      val x = _x.toInt
+      val y = _y.toInt
+      val robot = new Robot()
+      robot.id = Robot.globalId
+      Robot.globalId += 1
+      robot.cell = get(grid, x, y)
+      robot.direction = charToType(direction.head)
+      robots.add(robot)
+    }
+
+    applySolution(chromosome, robots, grid)
+
+    val engine = new Engine(robots, grid)
+    engine.playToEnd()
+    val score = engine.score
+    score
+  }
+
+  if(Constants.isLocal){
         val rawInput =
             """#........L........#
               |#........R........#
