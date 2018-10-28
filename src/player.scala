@@ -11,7 +11,7 @@ import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import scala.language.postfixOps
 
 object Constants {
-    val isLocal = false
+    val isLocal = true
 
     val TimesNone = 10
     val MaxTime = if(isLocal)20000 else 950
@@ -29,9 +29,9 @@ object Constants {
     val DEATH_VOID = 1
 
     object GA {
-      val PoolSize = if(isLocal) 1000 else 100
-      val SelectionSize = if(isLocal) 1.0/100.0 else 10.0/100.0
-      val MaxGenerations = if(isLocal) 100 else 10
+      val PoolSize = if(isLocal) 100 else 100
+      val SelectionSize = if(isLocal) 5.0/100.0 else 1.0/100.0
+      val MaxGenerations = if(isLocal) 1000 else 10
       val Elitism = 2
     }
 
