@@ -11,7 +11,7 @@ import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import scala.language.postfixOps
 
 object Constants {
-    val isLocal = false
+    val isLocal = true
 
     val TimesNone = 10
     val MaxTime = if(isLocal)20000 else 950
@@ -180,8 +180,7 @@ object Player extends App {
     def randomFrom[A](values: Seq[A]): A = values(Random.nextInt(values.size))
 
     def getRandomChromosome(grid: Array[Array[Cell]]): Chromosome = {
-        val nones = List.fill(TimesNone)(NONE)
-        val basicDirs = UP :: DOWN :: LEFT :: RIGHT :: Nil
+
 
         val newChromosome: Chromosome = Array.tabulate[Int](MAP_HEIGHT, MAP_WIDTH)((y:Int,x:Int) => VOID)
 
@@ -190,14 +189,20 @@ object Player extends App {
           .toList
           .foreach {
               case c: Cell if c.`type` == NONE =>
-                newChromosome(c.y)(c.x) = randomFrom(nones ++ basicDirs.flatMap(e => if (c.nexts(e).`type` == NONE) Some(e) else None))
+                newChromosome(c.y)(c.x) = randomGene(c)
               case c: Cell =>
                 newChromosome(c.y)(c.x) = c.`type`
           }
         newChromosome
     }
 
-    def applySolution(solution: Chromosome, robots: util.ArrayList[Robot], grid: Array[Array[Cell]]): Unit =
+  private def randomGene(cell: Cell) = {
+    val nones = List.fill(TimesNone)(NONE)
+    val basicDirs = UP :: DOWN :: LEFT :: RIGHT :: Nil
+    randomFrom(nones ++ basicDirs.flatMap(e => if (cell.nexts(e).`type` == VOID) None else Some(e)))
+  }
+
+  def applySolution(solution: Chromosome, robots: util.ArrayList[Robot], grid: Array[Array[Cell]]): Unit =
       0 until MAP_HEIGHT foreach { y =>
         0 until MAP_WIDTH foreach { x =>
           if(solution(y)(x) != NONE && solution(y)(x) != VOID) {
@@ -266,7 +271,7 @@ object Player extends App {
           } else {
             parent2(y)(x)
           }
-          if(random(5)) {
+          if(parent1(y)(x) != VOID && parent2(y)(x) != VOID && random(5)) {
             newChild(y)(x) = randomFrom(LEFT :: RIGHT :: UP :: DOWN :: NONE :: Nil)
           }
         }
@@ -300,7 +305,6 @@ object Player extends App {
       chromosomesScored = chromosomesScored.sortBy(_._2)(Ordering.Int.reverse)
 
       0 until GA.MaxGenerations foreach { generation =>
-        Console.err.println(s"Gen $generation")
         val selected:List[Chromosome] = chromosomesScored.take((GA.PoolSize * GA.SelectionSize).floor.toInt).map(_._1)
 
         val evolved: List[Chromosome] = evolve(selected)
@@ -312,6 +316,7 @@ object Player extends App {
         chromosomesScored = newPoolScored
 
         chromosomesScored = chromosomesScored.sortBy(_._2)(Ordering.Int.reverse)
+        Console.err.println(s"Gen $generation best : ${chromosomesScored.head._2} with ${showChromosome(chromosomesScored.head._1)}")
       }
 
 
