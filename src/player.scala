@@ -11,7 +11,7 @@ import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import scala.language.postfixOps
 
 object Constants {
-    val isLocal = true
+    val isLocal = false
 
     val TimesNone = 10
     val MaxTime = if(isLocal)20000 else 950
@@ -206,7 +206,9 @@ object Player extends App {
   def applySolution(solution: Chromosome, robots: util.ArrayList[Robot], grid: Array[Array[Cell]]): Unit =
       0 until MAP_HEIGHT foreach { y =>
         0 until MAP_WIDTH foreach { x =>
-          if(solution(y)(x) != NONE && solution(y)(x) != VOID) {
+          if(grid(y)(x).`type` != NONE && solution(y)(x) != grid(y)(x).`type`){
+            throw new RuntimeException(s"Tried to put ${solution(y)(x)} on ($x, $y) but it was a ${grid(y)(x).`type`}")
+          } else if(solution(y)(x) != NONE) {
             apply(grid, robots, x, y, solution(y)(x))
           }
         }
