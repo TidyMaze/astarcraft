@@ -30,8 +30,9 @@ object Constants {
 
     object GA {
       val PoolSize = if(isLocal) 1000 else 100
-      val SelectionSize = 10.0/100.0
-      val MaxGenerations = if(isLocal) 50 else 10
+      val SelectionSize = 1.0/100.0
+      val MaxGenerations = if(isLocal) 100 else 10
+      val Elitism = 2
     }
 
     def typeToChar(`type`: Int): Char = {
@@ -217,7 +218,10 @@ object Player extends App {
     0 until MAP_HEIGHT foreach { y =>
       0 until MAP_WIDTH foreach { x =>
         val gene = chromosome(y)(x)
-        if(grid(y)(x).`type` != gene && gene != NONE){
+        val originalGridValue = grid(y)(x).`type`
+        if(gene != originalGridValue && originalGridValue != NONE){
+          throw new RuntimeException(s"Tried to put $gene in ($x, $y) but it was already a $originalGridValue")
+        } else if(originalGridValue != gene && gene != NONE){
           res += ArrowAction(x, y, gene)
         }
       }
@@ -257,9 +261,9 @@ object Player extends App {
     grid
   }
 
-  def evolve(selected: List[Chromosome]): List[Chromosome] = {
+  def evolve(originalGrid: Array[Array[Cell]], selected: List[Chromosome]): List[Chromosome] = {
     val res = ListBuffer.empty[Chromosome]
-    while(res.size < GA.PoolSize){
+    while(res.size < GA.PoolSize - GA.Elitism){
       val parent1 = randomFrom(selected)
       val parent2 = randomFrom(selected)
 
@@ -271,7 +275,7 @@ object Player extends App {
           } else {
             parent2(y)(x)
           }
-          if(parent1(y)(x) != VOID && parent2(y)(x) != VOID && random(5)) {
+          if(originalGrid(y)(x).`type` == NONE && random(5)) {
             newChild(y)(x) = randomFrom(LEFT :: RIGHT :: UP :: DOWN :: NONE :: Nil)
           }
         }
@@ -304,19 +308,33 @@ object Player extends App {
 
       chromosomesScored = chromosomesScored.sortBy(_._2)(Ordering.Int.reverse)
 
+      var bestScore = -1
+
       0 until GA.MaxGenerations foreach { generation =>
+
+        val elitism = chromosomesScored.take(GA.Elitism).map(_._1)
+
         val selected:List[Chromosome] = chromosomesScored.take((GA.PoolSize * GA.SelectionSize).floor.toInt).map(_._1)
 
-        val evolved: List[Chromosome] = evolve(selected)
-        assert(evolved.size == GA.PoolSize)
+        val evolved: List[Chromosome] = evolve(startGrid, selected)
 
-        val newPoolScored = evolved.map(c => (c, scoreChromosome(input, robotsInputs, c)))
+        val newPool = evolved ++ elitism
+
+        assert(newPool.size == GA.PoolSize)
+
+        val newPoolScored = newPool.map(c => (c, scoreChromosome(input, robotsInputs, c)))
 
 //        Console.err.println(newPoolScored.map(c => c._2 + " with " + showChromosome(c._1)).mkString("\n"))
         chromosomesScored = newPoolScored
 
         chromosomesScored = chromosomesScored.sortBy(_._2)(Ordering.Int.reverse)
-        Console.err.println(s"Gen $generation best : ${chromosomesScored.head._2} with ${showChromosome(chromosomesScored.head._1)}")
+
+        val thisGenBestResult = chromosomesScored.head
+        val thisGenBestScore = thisGenBestResult._2
+        if(thisGenBestScore > bestScore) {
+          Console.err.println(s"Gen $generation best : $thisGenBestScore with ${showChromosome(thisGenBestResult._1)}")
+          bestScore = thisGenBestScore
+        }
       }
 
 
