@@ -30,7 +30,7 @@ object Constants {
 
     object GA {
       val PoolSize = if(isLocal) 1000 else 100
-      val SelectionSize = 1.0/100.0
+      val SelectionSize = if(isLocal) 1.0/100.0 else 10.0/100.0
       val MaxGenerations = if(isLocal) 100 else 10
       val Elitism = 2
     }
