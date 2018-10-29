@@ -11,7 +11,7 @@ import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import scala.language.postfixOps
 
 object Constants {
-    val isLocal = true
+    val isLocal = false
 
     val TimesNone = 10
     val MaxTime = if(isLocal)20000 else 950
@@ -29,10 +29,10 @@ object Constants {
     val DEATH_VOID = 1
 
     object GA {
-      val PoolSize = if(isLocal) 100 else 100
-      val SelectionSize = if(isLocal) 5.0/100.0 else 1.0/100.0
-      val MaxGenerations = if(isLocal) 1000 else 10
-      val Elitism = 2
+      val PoolSize = if(isLocal) 200 else 100
+      val SelectionSize = if(isLocal) 1.0/100.0 else 1.0/100.0
+      val MaxGenerations = if(isLocal) 50 else 10
+      val Elitism = 1
     }
 
     def typeToChar(`type`: Int): Char = {
@@ -272,7 +272,7 @@ object Player extends App {
       val newChild: Chromosome = Array.fill[Int](MAP_HEIGHT, MAP_WIDTH)(VOID)
       0 until MAP_HEIGHT foreach { y =>
         0 until MAP_WIDTH foreach { x =>
-          newChild(y)(x) = if(random(95)){
+          newChild(y)(x) = if(random(98)){
             parent1(y)(x)
           } else {
             parent2(y)(x)
